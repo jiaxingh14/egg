@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(perl -pi -e 's/thickness = 0\\\\.03,/thickness = 0.015,/' src/egg.ts)",
+      "Bash(perl -pi -e 's/createEggShellGeometry\\\\\\(1, 0\\\\.03\\\\\\)/createEggShellGeometry\\(1, 0.015\\)/' src/shell.ts)"
+    ]
+  }
+}
