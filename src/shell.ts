@@ -27,6 +27,15 @@ const CRACKS_PER_CLICK = 3;
 const CONNECT_MAX_LENGTH = 2.5;
 /** How far a loose piece pops outward to show it is free. */
 const LOOSE_POP = 0.03;
+/**
+ * Loose pieces shrink toward their centroid so a gap rings them on every
+ * side — the popped piece covers its own crack line from most angles, so
+ * the line alone can't signal detachment.
+ */
+const LOOSE_SHRINK = 0.96;
+/** Loose pieces bob in and out radially so motion marks them as grabbable. */
+const BOB_AMPLITUDE = 0.012;
+const BOB_SPEED = 2.2;
 
 export interface Boundary {
   pieces: [Piece, Piece];
@@ -45,6 +54,9 @@ export interface Piece {
   boundaries: Boundary[];
   loose: boolean;
   removed: boolean;
+  /** Resting position once loose; the bob animation oscillates around it. */
+  restPosition?: THREE.Vector3;
+  bobPhase?: number;
 }
 
 export interface Shell {
@@ -400,10 +412,31 @@ function updateLoosePieces(shell: Shell): void {
     if (piece.boundaries.length === 0) continue;
     if (!piece.boundaries.every((b) => b.cracked)) continue;
     piece.loose = true;
-    // Pop outward so the player can see the piece is free to grab.
+    // Pop outward and shrink so the player can see the piece is free.
     piece.mesh.position.add(
       piece.mesh.position.clone().normalize().multiplyScalar(LOOSE_POP),
     );
+    piece.mesh.scale.setScalar(LOOSE_SHRINK);
+    piece.restPosition = piece.mesh.position.clone();
+    piece.bobPhase = Math.random() * Math.PI * 2;
+  }
+}
+
+/** Bob loose pieces radially around their rest position. Call every frame. */
+export function animateLoosePieces(
+  shell: Shell,
+  time: number,
+  except?: Piece,
+): void {
+  for (const piece of shell.pieces) {
+    if (!piece.loose || piece.removed || piece === except) continue;
+    if (!piece.restPosition) continue;
+    const lift =
+      BOB_AMPLITUDE *
+      (0.5 + 0.5 * Math.sin(time * BOB_SPEED + piece.bobPhase!));
+    piece.mesh.position
+      .copy(piece.restPosition)
+      .multiplyScalar(1 + lift / piece.restPosition.length());
   }
 }
 

@@ -2,7 +2,13 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createEggGeometry, createEggWhiteMaterial } from './egg';
-import { buildShell, crackShellAt, removePiece, type Piece } from './shell';
+import {
+  animateLoosePieces,
+  buildShell,
+  crackShellAt,
+  removePiece,
+  type Piece,
+} from './shell';
 import { addFragmentBody, addStaticConvexCollider, stepPhysics } from './physics';
 import './style.css';
 
@@ -186,6 +192,7 @@ const clock = new THREE.Clock();
 
 renderer.setAnimationLoop(() => {
   stepPhysics(clock.getDelta());
+  animateLoosePieces(shell, clock.elapsedTime, drag?.piece);
   controls.update();
   renderer.render(scene, camera);
 });
