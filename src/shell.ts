@@ -444,8 +444,13 @@ export function animateLoosePieces(
  * Take a piece out of the shell bookkeeping once it has been peeled off.
  * Crack lines along its boundaries vanish — the open hole shows instead.
  * The mesh itself stays in the scene graph; physics owns it from here.
+ *
+ * Returns neighbors this removal left with no present neighbor at all:
+ * nothing holds them anymore, so the caller should drop them into physics.
+ * (Checked regardless of loose state — a piece whose partners are all
+ * removed has no crackable boundaries left, so it could never be freed.)
  */
-export function removePiece(piece: Piece): void {
+export function removePiece(piece: Piece): Piece[] {
   piece.removed = true;
   for (const boundary of piece.boundaries) {
     if (boundary.line) {
@@ -454,4 +459,16 @@ export function removePiece(piece: Piece): void {
       boundary.line = undefined;
     }
   }
+
+  const isolated: Piece[] = [];
+  for (const boundary of piece.boundaries) {
+    const other = boundary.pieces[0] === piece ? boundary.pieces[1] : boundary.pieces[0];
+    if (other.removed || isolated.includes(other)) continue;
+    const alone = other.boundaries.every((b) => {
+      const partner = b.pieces[0] === other ? b.pieces[1] : b.pieces[0];
+      return partner.removed;
+    });
+    if (alone) isolated.push(other);
+  }
+  return isolated;
 }

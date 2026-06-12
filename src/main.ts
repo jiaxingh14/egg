@@ -61,6 +61,7 @@ scene.add(shell.group);
 Object.assign(window as unknown as Record<string, unknown>, {
   __shell: shell,
   __camera: camera,
+  __controls: controls,
 });
 
 // --- Cracking and peeling ---------------------------------------------------
@@ -154,21 +155,33 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   renderer.domElement.style.cursor = hit?.piece.loose ? 'grab' : 'default';
 });
 
+function randomSpin(strength: number): THREE.Vector3 {
+  return new THREE.Vector3(
+    Math.random() - 0.5,
+    Math.random() - 0.5,
+    Math.random() - 0.5,
+  ).multiplyScalar(strength);
+}
+
+/**
+ * Hand a piece over to physics. Pieces this leaves with no neighbors at
+ * all have nothing holding them, so they tumble off on their own.
+ */
+function releasePiece(piece: Piece, velocity: THREE.Vector3, spin: THREE.Vector3): void {
+  const isolated = removePiece(piece);
+  addFragmentBody(piece.mesh, velocity, spin);
+  for (const neighbor of isolated) {
+    const away = neighbor.mesh.position.clone().normalize().multiplyScalar(0.4);
+    releasePiece(neighbor, away, randomSpin(2));
+  }
+}
+
 renderer.domElement.addEventListener('pointerup', (event) => {
   if (drag) {
     const { piece, velocity } = drag;
     drag = null;
     controls.enabled = true;
-    removePiece(piece);
-    addFragmentBody(
-      piece.mesh,
-      velocity.clampLength(0, 6),
-      new THREE.Vector3(
-        Math.random() - 0.5,
-        Math.random() - 0.5,
-        Math.random() - 0.5,
-      ).multiplyScalar(4),
-    );
+    releasePiece(piece, velocity.clampLength(0, 6), randomSpin(4));
     return;
   }
 
